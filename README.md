@@ -1,4 +1,5 @@
 # Three-dimensional aspects of plasticity-induced crack closure: A finite element simulation
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6908116.svg)](https://doi.org/10.5281/zenodo.6908116)
 
 This repository contains the code and finite element model used to generate the results and plots of the research article.
 
