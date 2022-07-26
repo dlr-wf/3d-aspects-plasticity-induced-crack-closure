@@ -1,0 +1,74 @@
+/POST1
+ALLSEL
+
+! variables
+*DIM,res,TABLE,steps,4
+boundary = 0.9
+
+!plastic zone
+SET,number_loadsteps-4
+ALLSEL
+ETABLE,eppltab,NL,EPEQ
+*VGET,epp_1,ELEM,,ETAB,eppltab
+
+SET,number_loadsteps-1
+ALLSEL
+ETABLE,eppltab,NL,EPEQ
+*VGET,epp_2,ELEM,,ETAB,eppltab
+
+*Get,maxel,ELEM,0,NUM,MAXD
+ALLSEL  
+ESEL,NONE   
+*DO,ii,1,maxel,1
+	*IF,epp_1(ii,1),NE,epp_2(ii,1),THEN   
+		ESEL,A,ELEM,,ii 
+	*ENDIF  
+*ENDDO 
+
+ESEL,U,CENT,X,a-offset+((i-2)*esi),b	
+CM,plasticzone,ELEM
+*Get,pzel,ELEM,0,NUM,MAXD
+
+!determine plastic energy boundary
+ETAB,pzvolume,VOLU
+ETAB,pzenergy_dens,SEND,PLASTIC
+SMULT,pzenergy,pzenergy_dens,pzvolume,1,1
+ssum
+*GET,pzenergy_sum,ssum,pzenergy
+*GET,pzvolume_sum,ssum,pzvolume
+pzenergy_bon = boundary*pzenergy_sum
+*VGET,pzenergy_el,ELEM,,ETAB,pzenergy
+
+*DO,ii,1,steps,1
+	
+	res(ii,1) = -steps*esi+ii*esi
+
+	CMSEL,S,plasticzone,ELEM
+	ESEL,R,CENT,X,a-offset+(ii)*esi, a-offset+(ii-1)*esi
+	
+	ETAB,pzv_e,VOLU
+	ETAB,pzed_e,SEND,PLASTIC
+	SMULT,pze_te,pzed_e,pzv_e,1,1
+	ssum
+	*GET,pze_sum_e,ssum,pze_te
+	*GET,pzv_sum_e,ssum,pzv
+	res(ii,2) = pze_sum_e
+	res(ii,3) = pzv_sum_e
+	
+	ETAB,pz_b,CENT,Y
+	ESORT,ETAB,pz_b,0
+	*GET,pz_b,SORT,0,MAX
+	res(ii,4) = pz_b
+	
+*ENDDO
+
+*CFOPEN,R%R%.K%K%.t%t*2%.cyclicplasticwakedistribution_,txt,,
+*VWRITE,'x,','upl,','volu,','b'
+(A21,A21,A21,A21)
+*CFCLOS
+
+*CFOPEN,R%R%.K%K%.t%t*2%.cyclicplasticwakedistribution_,txt,,append
+*VWRITE,res(1,1),res(1,2),res(1,3),res(1,4)
+(F20.10,',',2(F20.10,',',)F20.10)
+*CFCLOS
+	

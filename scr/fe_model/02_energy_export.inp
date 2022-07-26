@@ -1,0 +1,68 @@
+/POST1
+ALLSEL
+
+C*****************************************************************
+C*** elastische/ plastische Energie
+C*****************************************************************
+
+*DIM,res,TABLE,steps,5
+i = 0
+
+*DO,kk,5,number_loadsteps,3
+	*DEL,U_plast_dens,,nopr
+	*DEL,U_plast,,nopr
+	*DEL,V_elem,,nopr
+	
+	SET,kk
+	ALLSEL
+	ESEL,S,TYPE,,1
+	i = i + 1
+	res(i,1)= i
+	ETABLE,U_elast_dens,SEND,ELASTIC
+	ETABLE,U_plast_dens,SEND,PLASTIC
+	ETABLE,V_elem,VOLU
+	SMULT,U_plast,U_plast_dens,V_elem,1,1
+	SMULT,U_elast,U_elast_dens,V_elem,1,1
+	ssum
+	*get,res(i,2),ssum,U_plast
+	*get,res(i,3),ssum,U_elast
+	
+	ESEL,R,CENT,X,a-offset+(i-1)*esi,b
+	ETABLE,U_elast_dens,SEND,ELASTIC
+	ETABLE,U_plast_dens,SEND,PLASTIC
+	ETABLE,V_elem,VOLU
+	SMULT,U_plast,U_plast_dens,V_elem,1,1
+	SMULT,U_elast,U_elast_dens,V_elem,1,1
+	ssum
+	*get,res(i,4),ssum,U_plast
+	*get,res(i,5),ssum,U_elast
+	
+	
+*ENDDO
+
+
+C*****************************************************************
+C*** OUTPUT
+C*****************************************************************
+
+*CFOPEN,R%R%.K%K%.t%t*2%.energy_,txt
+*VWRITE,'cycle,','U_plast,','U_elast,','U_plin,','U_elin'
+(A21,A21,A21,A21,A21)
+*CFCLOS
+
+*CFOPEN,R%R%.K%K%.t%t*2%.energy_,txt,,APPEND
+*VWRITE,'0.0,','0.0,','0.0,','0.0,','0.0'
+(A21,A21,A21,A21,A21)
+*CFCLOS
+
+*CFOPEN,R%R%.K%K%.t%t*2%.energy_,txt,,append
+*VWRITE,res(1,1),res(1,2),res(1,3),res(1,4),res(1,5)
+(F20.1,',',F20.10,',',F20.10,',',F20.10,',',F20.10)
+*CFCLOS
+
+C*****************************************************************
+C*** DELETE
+C*****************************************************************
+	
+*DEL,res
+*DEL,i

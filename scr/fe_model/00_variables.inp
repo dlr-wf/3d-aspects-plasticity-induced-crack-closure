@@ -1,0 +1,47 @@
+C*****************************************************************
+C*** variables
+C*****************************************************************
+
+H=400		!height of sheet
+B=160		!width of sheet
+t=4			!thickness of sheet
+K=20		!maximum stress intensity factor
+a=20		!crack length
+Force=3000	!force
+R=0
+
+r1=3.2		!inner quad - extension to left
+r2=3		!inner quad - extension to right
+r3=1.5		!inner quad - height
+
+nel=4		!number of elements in z-direction
+offset=3	!offset of crack tip in x-direction
+steps=40	!number of cycles
+
+
+esi=0.1		!element size - inner quad
+esd=0.1		!element size in z-direction
+
+harde=1		!apply hardening rule (0=nein, 1=ja)
+ani=0		!apply anisotropy rules (0=nein, 1=ja)
+
+
+
+
+C*****************************************************************
+C*** solution
+C*****************************************************************
+
+*DIM,loadtab,ARRAY,11,1
+loadtab(1,1) = 0.814
+loadtab(2,1) = 0.887
+loadtab(3,1) = 0.922
+loadtab(4,1) = 0.943
+loadtab(5,1) = 0.961
+loadtab(6,1) = 0.978
+loadtab(7,1) = 0.986
+loadtab(8,1) = 0.992
+loadtab(9,1) = 0.997
+loadtab(10,1) = 0.999
+loadtab(11,1) = 1
+

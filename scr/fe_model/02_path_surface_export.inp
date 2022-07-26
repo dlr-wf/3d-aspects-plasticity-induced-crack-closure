@@ -1,0 +1,183 @@
+/POST1
+ALLSEL
+
+C*****************************************************************
+C*** VARIABLES
+C*****************************************************************
+
+number_ipoints = 65
+offset_left = 0.5
+offset_right = 2
+
+*DIM,res,TABLE,number_ipoints+1,21
+
+
+C*****************************************************************
+C*** POSITION MAXIMUM PRESSURE
+C*****************************************************************
+SET,LAST
+
+NSEL,ALL
+NSORT,CONT,PRES,0
+*GET,node_pres,SORT,0,IMAX
+*GET,xpos_node_pres,NODE,node_pres,LOC,X
+
+C*****************************************************************
+C*** PATH DEFINITION - X DIRECTION
+C*****************************************************************
+
+nstartx = node(a-offset+steps*esi+offset_right,0,t)
+nendx = node(a-offset-offset_left,0,t)
+lenx = offset_left+steps*esi+offset_right
+
+PATH,pathx,2,,number_ipoints+1
+PPATH,1,nstartx
+PPATH,2,nendx
+
+*DO,i,1,number_ipoints+1,1
+
+	res(i,1) = i -1
+	res(i,2) = ((i-1)/number_ipoints)*lenx - offset_right
+	
+	ALLSEL
+	PSEL,S,pathx
+	PDEF,CP,CONT,PRES
+	*GET,res(i,3),PATH,,ITEM,CP,PATHPT,i
+
+	ESEL,R,TYPE,,1
+	PDEF,SEQV,S,EQV
+	*GET,res(i,4),PATH,,ITEM,SEQV,PATHPT,i
+	PDEF,EEQV,EPTO,EQV
+	*GET,res(i,5),PATH,,ITEM,EEQV,PATHPT,i
+	PDEF,SX,S,X
+	*GET,res(i,6),PATH,,ITEM,SX,PATHPT,i
+	PDEF,SY,S,Y
+	*GET,res(i,7),PATH,,ITEM,SY,PATHPT,i
+	PDEF,SZ,S,Z
+	*GET,res(i,8),PATH,,ITEM,SZ,PATHPT,i
+	PDEF,SXY,S,XY
+	*GET,res(i,9),PATH,,ITEM,SXY,PATHPT,i
+	PDEF,SYZ,S,YZ
+	*GET,res(i,10),PATH,,ITEM,SYZ,PATHPT,i
+	PDEF,SXZ,S,XZ
+	*GET,res(i,11),PATH,,ITEM,SXZ,PATHPT,i
+	
+	PDEF,EX,EPTO,X
+	*GET,res(i,12),PATH,,ITEM,EX,PATHPT,i
+	PDEF,EY,EPTO,Y
+	*GET,res(i,13),PATH,,ITEM,EY,PATHPT,i
+	PDEF,EZ,EPTO,Z
+	*GET,res(i,14),PATH,,ITEM,EZ,PATHPT,i
+	PDEF,EXY,EPTO,XY
+	*GET,res(i,15),PATH,,ITEM,EXY,PATHPT,i
+	PDEF,EYZ,EPTO,YZ
+	*GET,res(i,16),PATH,,ITEM,EYZ,PATHPT,i
+	PDEF,EXZ,EPTO,XZ
+	*GET,res(i,17),PATH,,ITEM,EXZ,PATHPT,i
+	
+	PDEF,UX,U,X
+	*GET,res(i,18),PATH,,ITEM,UX,PATHPT,i
+	PDEF,UY,U,Y
+	*GET,res(i,19),PATH,,ITEM,UY,PATHPT,i
+	PDEF,UZ,U,Z
+	*GET,res(i,20),PATH,,ITEM,UZ,PATHPT,i
+	
+*ENDDO
+
+C*****************************************************************
+C*** OUTPUT
+C*****************************************************************
+
+*CFOPEN,R%R%.K%K%.t%t*2%.surfacex_,txt,,
+*VWRITE,'xPos,','xPres,','xSeqv,','xEeqv,','xSx,','xSy,','xSz,','xSxy,','xSyz,','xSxz,','xEx,','xEy,','xEz,','xExy,','xEyz,','xExz,','xUx,','xUy,','xUz'
+(A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21)
+*CFCLOS
+
+*CFOPEN,R%R%.K%K%.t%t*2%.surfacex_,txt,,append
+*VWRITE,res(1,2),res(1,3),res(1,4),res(1,5),res(1,6),res(1,7),res(1,8),res(1,9),res(1,10),res(1,11),res(1,12),res(1,13),res(1,14),res(1,15),res(1,16),res(1,17),res(1,18),res(1,19),res(1,20)
+(F20.5,17(',',F20.10,)',',F20.10)
+*CFCLOS
+
+C*****************************************************************
+C*** PATH DEFINITION - Z DIRECTION
+C*****************************************************************
+nstartz = node(xpos_node_pres,0,0)
+nendz = node(xpos_node_pres,0,t)
+
+PATH,pathz,2,,number_ipoints+1
+PPATH,1,nstartz
+PPATH,2,nendz
+PSEL,S,pathz
+
+*DO,i,1,number_ipoints+1,1
+
+	res(i,1) = i -1
+	res(i,2) = ((i-1)/number_ipoints)*t
+	
+	ALLSEL
+	PSEL,S,pathz
+	PDEF,CP,CONT,PRES
+	*GET,res(i,3),PATH,,ITEM,CP,PATHPT,i
+
+	ESEL,R,TYPE,,1
+	PDEF,SEQV,S,EQV
+	*GET,res(i,4),PATH,,ITEM,SEQV,PATHPT,i
+	PDEF,EEQV,EPTO,EQV
+	*GET,res(i,5),PATH,,ITEM,EEQV,PATHPT,i
+	PDEF,SX,S,X
+	*GET,res(i,6),PATH,,ITEM,SX,PATHPT,i
+	PDEF,SY,S,Y
+	*GET,res(i,7),PATH,,ITEM,SY,PATHPT,i
+	PDEF,SZ,S,Z
+	*GET,res(i,8),PATH,,ITEM,SZ,PATHPT,i
+	PDEF,SXY,S,XY
+	*GET,res(i,9),PATH,,ITEM,SXY,PATHPT,i
+	PDEF,SYZ,S,YZ
+	*GET,res(i,10),PATH,,ITEM,SYZ,PATHPT,i
+	PDEF,SXZ,S,XZ
+	*GET,res(i,11),PATH,,ITEM,SXZ,PATHPT,i
+	
+	PDEF,EX,EPTO,X
+	*GET,res(i,12),PATH,,ITEM,EX,PATHPT,i
+	PDEF,EY,EPTO,Y
+	*GET,res(i,13),PATH,,ITEM,EY,PATHPT,i
+	PDEF,EZ,EPTO,Z
+	*GET,res(i,14),PATH,,ITEM,EZ,PATHPT,i
+	PDEF,EXY,EPTO,XY
+	*GET,res(i,15),PATH,,ITEM,EXY,PATHPT,i
+	PDEF,EYZ,EPTO,YZ
+	*GET,res(i,16),PATH,,ITEM,EYZ,PATHPT,i
+	PDEF,EXZ,EPTO,XZ
+	*GET,res(i,17),PATH,,ITEM,EXZ,PATHPT,i
+	
+	PDEF,UX,U,X
+	*GET,res(i,18),PATH,,ITEM,UX,PATHPT,i
+	PDEF,UY,U,Y
+	*GET,res(i,19),PATH,,ITEM,UY,PATHPT,i
+	PDEF,UZ,U,Z
+	*GET,res(i,20),PATH,,ITEM,UZ,PATHPT,i
+	
+*ENDDO
+
+C*****************************************************************
+C*** OUTPUT
+C*****************************************************************
+
+*CFOPEN,R%R%.K%K%.t%t*2%.surfacez_,txt,,
+*VWRITE,'xPos,','zPres,','zSeqv,','zEeqv,','zSx,','zSy,','zSz,','zSxy,','zSyz,','zSxz,','zEx,','zEy,','zEz,','zExy,','zEyz,','zExz,','zUx,','zUy,','zUz'
+(A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21,A21)
+*CFCLOS
+
+*CFOPEN,R%R%.K%K%.t%t*2%.surfacez_,txt,,append
+*VWRITE,res(1,2),res(1,3),res(1,4),res(1,5),res(1,6),res(1,7),res(1,8),res(1,9),res(1,10),res(1,11),res(1,12),res(1,13),res(1,14),res(1,15),res(1,16),res(1,17),res(1,18),res(1,19),res(1,20)
+(F20.5,17(',',F20.10,)',',F20.10)
+*CFCLOS
+
+C*****************************************************************
+C*** DELETE
+C*****************************************************************
+
+*DEL,res
+*DEL,i
+*DEL,number_ipoints
+*DEL,offset_path

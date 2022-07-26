@@ -1,0 +1,727 @@
+/BATCH
+
+C**********************************************************************************************
+C**********************************************************************************************
+C*** crack progation finite element model
+C*** 7-5-2022, Florian Paysan, Eric Breitbarth
+C**********************************************************************************************
+C**********************************************************************************************
+C*** unit system: [N], [mm], [MPa], [t*mm^(-3)], [N/mm^2 * sqrt(mm^2)]
+
+
+finish
+/clear
+
+/TITLE,3d crack
+/PLOPTS,DATE,0
+
+/PREP7
+C*****************************************************************
+C*** variables
+C*****************************************************************
+/input,00_variables,inp
+
+	
+C*****************************************************************
+C*** material parameters
+C*****************************************************************
+
+!2024-T3
+MP,EX,1,66400!E-Modul 					!E-modulus (N/mm^2)
+NUXY,1,0.33								!Poissons ratio
+
+!coefficent of friction
+TB,FRIC,1,1,,ISO 
+TBTEMP,0.0
+TBDATA,1,0.2							!dynamic coefficient of friction between two metal surfaces
+
+*IF,harde,GE,1,THEN
+	!Al2024
+	TB,BISO,1,1							!bi-linear material model
+	TBDATA,1,344.75,984					!Yield stress (N/mm^2), Tangent Modulus (N/mm^2)
+*ENDIF
+
+*IF,ani,GE,1,THEN
+	TB,HILL,1,1							!plastical anisotropy hill criterium
+	TBDATA,1,1.156,0.993,0.853,1,1,1	!yield stress ratios 
+*ENDIF
+
+C*****************************************************************
+C*** element types
+C*****************************************************************
+
+ET,1,SOLID185		!3-D 8-Node Structural Solid
+KEYOPT,1,2,2		!enhanced strain formulation
+
+ET,2,SOLID185		!3-D 8-Node Structural Solid
+KEYOPT,2,2,2		!enhanced strain formulation
+
+ET,3,CONTA174
+KEYOPT,3,7,4		
+
+ET,4,TARGE170
+!KEYOPT,4,5,1		!close small clearances
+
+C*****************************************************************
+C*** create modell
+C*****************************************************************
+
+C*****************************************************************
+C*** control parameter for modell meshing
+C*****************************************************************
+
+
+ParXY=esi*3							!control parameter x-y
+ParBlock=4*esi						
+
+
+ParZ=0.5*nel*esd					!control parameter z
+
+ParR1=(ParBlock+(t/2-ParZ)/2)		!size of first outer block
+ParR2=r3/2-ParZ						!size of second outer block
+ParR2T=r2/2-ParZ	
+
+
+C*****************************************************************
+C*** transformation to 1/8 model
+C*****************************************************************
+
+t=t/2
+
+C*****************************************************************
+C*** inner region with controlled meshing
+C*****************************************************************
+
+LOCAL,11,0,a,0,0,0,0,0
+
+
+!inner left quad
+K,1,	-r1,					0,						0
+K,2,	-r1,					r3/2-ParXY,		0
+K,3,	-r1,					r3/2+Pa	rXY,	0
+K,4,	-r1,					r3,						0
+
+K,5,	-r1/2-ParXY,	0,						0
+K,6,	-r1/2-ParXY,	r3/2-ParXY,		0
+K,7,	-r1/2-ParXY,	r3/2+ParXY,		0
+K,8,	-r1/2-ParXY,	r3,						0
+
+K,9,	-r1/2+ParXY,	0,						0
+K,10,	-r1/2+ParXY,	r3/2-ParXY,		0
+K,11,	-r1/2+ParXY,	r3/2+ParXY,		0
+K,12,	-r1/2+ParXY,	r3,						0
+
+K,13,	0,						0,						0
+K,14,	0,						r3/2-ParXY,		0
+K,15,	0,						r3/2+ParXY,		0
+K,16,	0,						r3,						0
+
+!inner right quad
+K,20,	r2,						0,						0
+K,21,	r2,						r3/2-ParXY,		0
+K,22,	r2,						r3/2+Pa	rXY,	0
+K,23,	r2,						r3,						0
+
+K,24,	r2/2-ParXY,		0,						0
+K,25,	r2/2-ParXY,		r3/2-ParXY,		0
+K,26,	r2/2-ParXY,		r3/2+ParXY,		0
+K,27,	r2/2-ParXY,		r3,						0
+
+K,28,	r2/2+ParXY,		0,						0
+K,29,	r2/2+ParXY,		r3/2-ParXY,		0
+K,30,	r2/2+ParXY,		r3/2+ParXY,		0
+K,31,	r2/2+ParXY,		r3,						0
+
+
+
+!areas left quad
+A,1,	2,	6, 	5
+A,2,	3,	7, 	6
+A,3,	4,	8, 	7
+A,5,	6,	10,	9
+A,6,	7,	11,	10
+A,7,	8,	12,	11
+A,9,	10,	14,	13
+A,10,	11,	15,	14
+A,11,	12,	16,	15
+
+!areas right quad
+A,13,	14,	25,	24
+A,14,	15,	26,	25
+A,15,	16,	27,	26
+A,24,	25,	29,	28
+A,25,	26,	30,	29
+A,26,	27,	31,	30
+A,28,	29,	21,	20
+A,29,	30,	22,	21
+A,30,	31,	23,	22
+
+
+
+!extrude all areas in z-direction
+ALLSEL
+VEXT,ALL,,,,,t/2-ParZ
+
+ASEL,S,LOC,Z,t/2-ParZ
+VEXT,ALL,,,,,2*ParZ
+
+ASEL,S,LOC,Z,t/2+ParZ
+VEXT,ALL,,,,,t/2-ParZ
+ALLSEL
+
+ASEL,S,LOC,X,-r1
+ASEL,R,LOC,Z,t/2
+VEXT,ALL,,,-ParBlock
+
+ASEL,S,LOC,Y,r3
+ASEL,R,LOC,Z,t/2
+VEXT,ALL,,,,ParBlock
+
+ASEL,S,LOC,X,r2
+ASEL,R,LOC,Z,t/2
+VEXT,ALL,,,ParBlock
+
+
+!mean field
+K,200,	-(r1+ParR1),		0,					0
+K,201,	-(r1+ParR1),		r3/2-ParXY,			0
+K,202,	-(r1+ParR1),		r3/2+ParXY,			0
+K,203,	-(r1+ParR1),		r3,					0
+K,204,	-(r1+ParR1),		r3+ParR1,			0
+K,205,	-r1,				r3+ParR1,			0
+K,206,	-r1/2-ParXY,		r3+ParR1,			0
+K,207,	-r1/2+ParXY,		r3+ParR1,			0
+K,208,	0,					r3+ParR1,			0
+K,209,	r2/2-ParXY,			r3+ParR1,			0
+K,210,	r2/2+ParXY,			r3+ParR1,			0
+K,211,	r2,					r3+ParR1,			0
+K,212,	r2+ParR1,			r3+ParR1,			0
+K,213,	r2+ParR1,			r3,					0
+K,214,	r2+ParR1,			r3/2+ParXY,			0
+K,215,	r2+ParR1,			r3/2-ParXY,			0
+K,216,	r2+ParR1,			0,					0
+
+
+K,220,	-(r1+ParR1),		0,					t
+K,221,	-(r1+ParR1),		r3/2-ParXY,	t
+K,222,	-(r1+ParR1),		r3/2+ParXY,	t
+K,223,	-(r1+ParR1),		r3,					t
+K,224,	-(r1+ParR1),		r3+ParR1,		t
+K,225,	-r1,						r3+ParR1,		t
+K,226,	-r1/2-ParXY,		r3+ParR1,		t
+K,227,	-r1/2+ParXY,		r3+ParR1,		t
+K,228,	0,							r3+ParR1,		t
+K,229,	r2/2-ParXY,			r3+ParR1,		t
+K,230,	r2/2+ParXY,			r3+ParR1,		t
+K,231,	r2,							r3+ParR1,		t
+K,232,	r2+ParR1,				r3+ParR1,		t
+K,233,	r2+ParR1,				r3,					t
+K,234,	r2+ParR1,				r3/2+ParXY,	t
+K,235,	r2+ParR1,				r3/2-ParXY,	t
+K,236,	r2+ParR1,				0,					t
+
+
+
+!mean field - generate volume
+V,	85, 	57,		116,	220,	86,		58,		115,	221
+V,	200,	113,	116,	220,	201,	114,	115,	221
+V,	1,		17,		113,	200,	2,		18,		114,	201
+V,	86,		58,		115,	221,	89,		61,		118,	222
+V,	221,	115,	114,	201,	222,	118,	117,	202
+V,	2,		18,		114,	201,	3,		33,		117,	202
+V,	89,		61,		118,	222,	91,		63,		120,	223
+V,	222,	118,	117,	202,	223,	120,	119,	203
+V,	3,		33,		117,	202,	4,		35,		119,	203
+V,	91,		63,		120,	223,	225,	124,	135,	224
+V,	223,	120,	119,	203,	224,	135,	136,	204
+V,	4,		35,		119,	203,	205,	121,	136,	204
+V,	124,	135,	136,	121,	225,	224,	204,	205
+V,	91,		63,		124,	225,	92,		64,		123,	226
+V,	205,	121,	124,	225,	206,	122,	123,	226
+V,	205,	4,		35,		121,	206,	8,		36,		122
+V,	92,		64,		123,	226,	96,		68,		126,	227
+V,	226,	123,	122,	206,	227,	126,	125,	207
+V,	206,	8,		36,		122,	207,	12,		40,		125
+V,	227,	126,	68,		96,		228,	128,	72,		100
+V,	227,	207,	125,	126,	228,	208,	127,	128
+V,	207,	125,	40,		12,		208,	127,	44,		16
+V,	228,	128,	72,		100,	229,	130,	76,		104
+V,	228,	208,	127,	128,	229,	209,	129,	130
+V,	208,	16,		44,		127,	209,	27,		48,		129
+V,	229,	130,	76,		104,	230,	132,	80,		108
+V,	229,	209,	129,	130,	230,	210,	131,	132
+V,	209,	27,		48,		129,	210,	31,		52,		131
+V,	108,	80,		132,	230,	112,	84,		134,	231
+V,	230,	132,	131,	210,	231,	134,	133,	211
+V,	31,		52,		131,	210,	23,		56,		133,	211
+V,	144,	84,		134,	145,	233,	112,	231,	232
+V,	134,	133,	146,	145,	231,	211,	212,	232
+V,	143,	56,		133,	146,	213,	23,		211,	212
+V,	144,	145,	146,	143,	233,	232,	212,	213
+V,	112,	84,		144,	233,	111,	83,		142,	234
+V,	233,	213,	143,	144,	234,	214,	141,	142
+V,	213,	23,		56,		143,	214,	22,		55,		141
+V,	111,	234,	142,	83,		109,	235,	140,	81
+V,	234,	214,	141,	142,	235,	215,	137,	140
+V,	22,		55,		141,	214,	21,		53,		137,	215
+V,	109,	235,	140,	81,		110,	236,	139,	82
+V,	235,	215,	137,	140,	236,	216,	138,	139
+V,	21,		53,		137,	215,	20,		54,		138,	216
+
+
+
+
+
+K,240,	-(r1+ParR1+ParR2),	0,						0
+K,241,	-(r1+ParR1+ParR2),	r3,						0
+K,242,	-(r1+ParR1+ParR2),	(r3+ParR1+ParR2T),		0
+K,243,	-r1,				(r3+ParR1+ParR2T),		0
+K,244,	0,					(r3+ParR1+ParR2T),		0
+K,245,	r2,					(r3+ParR1+ParR2T),		0
+K,246,	(r2+ParR1+ParR2),	(r3+ParR1+ParR2T),		0
+K,247,	(r2+ParR1+ParR2),	r3,						0
+K,248,	(r2+ParR1+ParR2),	0,						0
+
+
+
+K,250,	-(r1+ParR1+ParR2),	0,						t
+K,251,	-(r1+ParR1+ParR2),	r3,						t
+K,252,	-(r1+ParR1+ParR2),	(r3+ParR1+ParR2T),		t
+K,253,	-r1,				(r3+ParR1+ParR2T),		t
+K,254,	0,					(r3+ParR1+ParR2T),		t
+K,255,	r2,					(r3+ParR1+ParR2T),		t
+K,256,	(r2+ParR1+ParR2),	(r3+ParR1+ParR2T),		t
+K,257,	(r2+ParR1+ParR2),	r3,						t
+K,258,	(r2+ParR1+ParR2),	0,						t
+
+
+ASEL,S,LOC,X,-(r1+ParR1)
+ASEL,R,LOC,Y,r3/2
+VEXT,ALL,,,-ParR2/4
+
+ASEL,S,LOC,X,-r1/2
+ASEL,R,LOC,Y,(r3+ParR1)
+VEXT,ALL,,,,ParR2T/4
+
+ASEL,S,LOC,X,r2/2
+ASEL,R,LOC,Y,(r3+ParR1)
+VEXT,ALL,,,,ParR2T/4
+
+ASEL,S,LOC,X,(r2+ParR1)
+ASEL,R,LOC,Y,r3/2
+VEXT,ALL,,,ParR2/4
+
+
+
+V,	200,	201,	148,	240,	220,	221,	147,	250
+V,	203,	202,	149,	241,	223,	222,	150,	251
+V,	241,	149,	148,	240,	251,	150,	147,	250
+V,	204,	203,	241,	242,	224,	223,	251,	252
+V,	243,	205,	204,	242,	253,	225,	224,	252
+V,	205,	206,	152,	243,	225,	226,	151,	253
+V,	243,	152,	153,	244,	253,	151,	154,	254
+V,	208,	207,	153,	244,	228,	227,	154,	254
+V,	244,	208,	209,	155,	254,	228,	229,	156
+V,	244,	155,	157,	245,	254,	156,	158,	255
+V,	157,	210,	211,	245,	158,	230,	231,	255
+V,	245,	211,	212,	246,	255,	231,	232,	256
+V,	213,	212,	246,	247,	233,	232,	256,	257
+V,	247,	213,	214,	159,	257,	233,	234,	160
+V,	247,	159,	161,	248,	257,	160,	162,	258
+V,	161,	215,	216,	248,	162,	235,	236,	258
+
+
+
+C*****************************************************************
+C*** meshing of inner region
+C*****************************************************************
+
+LSEL,S,LOC,X,-r1,r2
+LSEL,R,LOC,Y,r3,0
+LSEL,R,LOC,Z,0
+LESIZE,ALL,esi
+
+LSEL,S,LOC,X,-r1,r2
+LSEL,R,LOC,Y,r3,0
+LSEL,R,LOC,Z,t
+LESIZE,ALL,esi
+
+LSEL,S,LOC,X,-r1,r2
+LSEL,R,LOC,Y,r3,0
+LSEL,U,LOC,Z,0
+LSEL,U,LOC,Z,t
+LSEL,U,LOC,Z,t/2-ParZ
+LSEL,U,LOC,Z,t/2+ParZ
+LESIZE,ALL,esd
+
+!LSEL,S,LINE,,149
+!LSEL,A,LINE,,152
+!LSEL,A,LINE,,179
+!LSEL,A,LINE,,180
+!LESIZE,ALL,esi
+ALLSEL
+
+C*****************************************************************
+C*** geometry for out mesh
+C*****************************************************************
+
+
+CSYS,0
+K,1000,	7,				0,						0
+K,1001,	7,				r3,						0
+K,1002,	7,				r3+ParR1+ParR2T,		0
+K,1003,	7,				h/2,					0
+
+K,1004,	a-(r1+ParR1+ParR2),		h/2,	0
+K,1005,	a-r1,					h/2,	0
+K,1006,	a,						h/2,	0
+K,1007,	a+r2,					h/2,	0
+K,1008,	a+(r1+ParR1+ParR2),		h/2,	0
+K,1009,	b/2,					h/2,	0
+
+K,1010,	b/2,	(r3+ParR1+ParR2T),		0
+K,1011,	b/2,	r3,						0
+K,1012,	b/2,	0,						0
+
+K,1020,	0,		0,		0
+K,1021,	0,		1,		0
+K,1022,	0,		r3,		0
+K,1023,	0,		r3+ParR1+ParR2T,		0
+K,1024,	0,		h/2,	0
+K,1025,	5,		0,		0
+K,1026,	5,		r3,		0
+K,1027,	5,		r3+ParR1+ParR2T,		0
+K,1028,	5,		h/2,	0
+
+
+
+!t
+K,1100,	7,				0,						t
+K,1101,	7,				r3,						t
+K,1102,	7,				r3+ParR1+ParR2T,		t
+K,1103,	7,				h/2,					t
+
+K,1104,	a-(r1+ParR1+ParR2),		h/2,	t
+K,1105,	a-r1,					h/2,	t
+K,1106,	a,						h/2,	t
+K,1107,	a+r2,					h/2,	t
+K,1108,	a+(r1+ParR1+ParR2),		h/2,	t
+K,1109,	b/2,					h/2,	t
+
+K,1110,	b/2,	(r3+ParR1+ParR2T),		t
+K,1111,	b/2,	r3,						t
+K,1112,	b/2,	0,						t
+
+K,1120,	0,		0,		t
+K,1121,	0,		1,		t
+K,1122,	0,		r3,		t
+K,1123,	0,		r3+ParR1+ParR2T,		t
+K,1124,	0,		h/2,	t
+K,1125,	5,		0,		t
+K,1126,	5,		r3,		t
+K,1127,	5,		r3+ParR1+ParR2T,		t
+K,1128,	5,		h/2,	t
+
+
+
+V,240,241,251,250,1000,1001,1101,1100
+V,241,242,252,251,1001,1002,1102,1101
+V,1002,242,252,1102,1003,1004,1104,1103
+V,242,243,253,252,1004,1005,1105,1104
+V,243,244,254,253,1005,1006,1106,1105
+V,244,245,255,254,1006,1007,1107,1106
+V,245,246,256,255,1007,1008,1108,1107
+V,246,256,1108,1008,1010,1110,1109,1009
+V,246,247,257,256,1010,1011,1111,1110
+V,247,248,258,257,1011,1012,1112,1111
+
+!V,1000,1100,1125,1025,1001,1101,1101,1001
+V,1026,1126,1101,1001,1025,1125,1100,1000
+V,1001,1026,1027,1002,1101,1126,1127,1102
+V,1002,1027,1028,1003,1102,1127,1128,1103
+V,1020,1022,1026,1025,1120,1122,1126,1125
+V,1022,1026,1126,1122,1023,1027,1127,1123
+V,1023,1027,1127,1123,1024,1028,1128,1124
+
+
+C*****************************************************************
+C*** meshing of outer region
+C*****************************************************************
+
+ALLSEL
+REAL,1
+ESIZE,2
+VMESH,ALL
+
+*GET,nel,ELEM,0,COUNT
+*GET,nno,NODE,0,COUNT
+
+ALLSEL
+
+C*****************************************************************
+C*** boundary conditions
+C*****************************************************************
+
+F_red = loadtab(1,1)
+pi=4.0*atan(1.0)
+F=K*sqrt(1000.0)*B*t/(sqrt(pi*(a-offset))*1.025)
+
+SELTOL,0.001
+
+NSEL,S,LOC,Y,0
+NSEL,R,LOC,X,a-offset,b/2.
+D,ALL,UY,0
+ALLSEL
+
+NSEL,S,LOC,X,0
+D,ALL,UX,0
+ALLSEL
+
+NSEL,S,LOC,Z,0
+D,ALL,UZ,0
+ALLSEL
+
+ASEL,S,LOC,Y,H/2
+SFA,ALL,,PRES,(-F/(B*t))*F_red
+ALLSEL
+
+NSEL,S,LOC,X,a
+NSEL,R,LOC,Y,0
+CM,CRACK_TIP_NODE_CM1,node
+
+
+NSEL,S,LOC,X,0
+NSEL,R,LOC,Y,0
+*GET,nod,NODE,0,NUM,max
+
+
+*IF,integ,GE,1,THEN
+					! Define a new VCCT calculation
+	CINT,NEW,1
+	CINT,TYPE,VCCT	!SIFS oder JINT oder VCCT
+	CINT,CTNC,CRACK_TIP_NODE_CM1,nod,1
+	CINT,NORM,11,2
+	CINT,SYMM,ON
+
+					! Define a new J-Integral calculation
+	CINT,NEW,2
+	CINT,TYPE,JINT	!SIFS oder JINT oder VCCT
+	CINT,CTNC,CRACK_TIP_NODE_CM1,nod,1
+	CINT,NORM,11,2
+	CINT,NCON,6
+	CINT,SYMM,ON
+
+	CINT,NEW,3
+	CINT,TYPE,SIFS	!SIFS oder JINT oder VCCT
+	CINT,CTNC,CRACK_TIP_NODE_CM1,nod,1
+	CINT,NORM,11,2
+	CINT,NCON,6
+	CINT,SYMM,ON
+
+*ENDIF
+
+C*****************************************************************
+C*** rigid target surface
+C*****************************************************************
+
+!modelling
+d=-0.3				! depth of rigid target surface
+
+K,2001,0,0,0,0
+K,2002,b/2,0,0
+K,2003,b/2,0,t
+K,2004,0,0,t
+
+K,2005,0,d,0,0
+K,2006,b/2,d,0
+K,2007,b/2,d,t
+K,2008,0,d,t
+
+V,2001,2002,2003,2004,2005,2006,2007,2008
+
+!meshing
+ALLSEL
+REAL,2
+TYPE,2
+ESIZE,3
+VSEL,U,LOC,Y,0,H/2
+VMESH,ALL
+ALLSEL,ALL
+
+!rigid boundary condition
+ESEL,S,TYPE,,2
+NSLE
+D,ALL,ALL,0
+ALLSEL
+
+C*****************************************************************
+C*** contact definition
+C*****************************************************************
+
+!contact properties
+stiff_fac=1					! Normal penalty stiffness factor
+pen_tol=1e-01				! penetration tolerance
+ini_clos=0					! initial gap closure
+
+R,3,,,stiff_fac,pen_tol,ini_clos
+
+!place contact element
+ESEL,S,TYPE,,1
+NSLE
+NSEL,R,LOC,Y,0
+REAL,3
+TYPE,3
+ESURF
+ALLSEL
+
+ESEL,S,TYPE,,2
+NSLE
+NSEL,R,LOC,Y,0
+REAL,3
+TYPE,4
+ESURF
+ALLSEL
+
+finish
+
+/SOLU
+
+C*****************************************************************
+C*** slow start for continous energy input
+C*****************************************************************
+ALLSEL
+*get,starttime,active,0,time,wall
+
+ANTYPE,STATIC
+NLGEOM,ON
+cutcontrol,plslimit,0.30
+AUTOTS,ON
+NEQIT,50				
+NSUBST,4,5,3			!attention: solution does not converge at larger number of loadsteps
+PRED,ON
+KBC,0					!ramped (0) or stepped (1) loading within a load step
+TIME,1					!final time
+OUTRES,CINT,ALL
+OUTRES,ALL,ALL
+SOLVE
+SAVE
+
+
+*DO,kk,1,10,1
+
+	TIME,1+kk*3-2				
+	NSUBST,2,3,1
+	ASEL,S,LOC,Y,H/2
+	SFA,ALL,,PRES,(-F/(B*t))*R*F_red
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+
+
+	TIME,1+kk*3-1				
+	NSUBST,1,2,1
+	ESEL,S,TYPE,,1
+	NSLE
+	NSEL,R,LOC,Y,0
+	NSEL,R,LOC,X,0,a-offset+(kk-1)*esi
+	DDELE,ALL,UY
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+
+	TIME,1+kk*3				
+	NSUBST,4,5,3
+	ASEL,S,LOC,Y,H/2
+
+	F_red = loadtab(kk+1,1)
+	F=K*sqrt(1000.0)*B*t/(sqrt(pi*(a-offset+kk*esi))*1.025)
+	SFA,ALL,,PRES,-F/(B*t)*F_red
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+	
+	
+
+*ENDDO
+
+C*****************************************************************
+C*** cycles
+C*****************************************************************
+
+*DO,kk,11,steps,1
+
+	TIME,1+kk*3-2				
+	NSUBST,2,3,1
+	ASEL,S,LOC,Y,H/2
+	SFA,ALL,,PRES,(-F/(B*t))*R
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+
+
+	TIME,1+kk*3-1				
+	NSUBST,1,2,1
+	ESEL,S,TYPE,,1
+	NSLE
+	NSEL,R,LOC,Y,0
+	NSEL,R,LOC,X,0,a-offset+(kk-1)*esi
+	DDELE,ALL,UY
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+	
+	*IF,kk,EQ,steps,THEN
+		nnssteps=40
+	*ELSE
+		nnssteps=4
+	*ENDIF
+
+	TIME,1+kk*3				
+	NSUBST,nnssteps,nnssteps+1,nnssteps-1
+	ASEL,S,LOC,Y,H/2
+	F=K*sqrt(1000.0)*B*t/(sqrt(pi*(a-offset+kk*esi))*1.025)
+	SFA,ALL,,PRES,-F/(B*t)
+	ALLSEL
+	OUTRES,CINT,ALL
+	OUTRES,ALL,ALL
+	SOLVE
+	SAVE
+
+*ENDDO
+
+! unloading
+TIME,1+(steps+1)*3-2				
+NSUBST,nnssteps,nnssteps+1,nnssteps-1
+ASEL,S,LOC,Y,H/2
+SFA,ALL,,PRES,(-Force/(B*t))*R
+ALLSEL
+OUTRES,CINT,ALL
+OUTRES,ALL,ALL
+SOLVE
+SAVE
+
+*get,finishtime,active,0,time,wall
+computationtime=finishtime-starttime
+
+
+
+C*****************************************************************
+C*** Postprocessing
+C*****************************************************************
+/POST1
+t=2*t
+CSYS,0
+RSYS,0
+
+
+
